@@ -3,6 +3,7 @@ package com.example.natalia.githuber;
 import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -30,22 +31,31 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Log.d("Natalia", "przed");
-        //final SwipeRefreshLayout layoutManager = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         RetrofitService retrofitService= new RetrofitService();
         try {
-            Log.d("Natalia", "RetroSe");
             main();
-            //String[] data = retrofitService.getData();
-            /*Log.d("Natalia", "jest tutaj");
-            RecyclerView.Adapter mAdapter = new RecyclerViewAdapter(data);
-            recyclerView.setAdapter(mAdapter);*/
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        final SwipeRefreshLayout mySwipe = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
+
+        mySwipe.setOnRefreshListener(
+                new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        try {
+                            main();
+                            mySwipe.setRefreshing(false);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+        );
 
     }
 
@@ -100,17 +110,14 @@ public class MainActivity extends Activity {
         MainActivity.GitHub github = retrofit.create(MainActivity.GitHub.class);
 
         Call<List<MainActivity.Contributor>> call = github.contributors("square", "retrofit");
-        Log.d("Natalia", "przed enq");
         call.enqueue(new Callback<List<MainActivity.Contributor>>() {
             @Override
             public void onResponse(Response<List<Contributor>> response, Retrofit retrofit) {
-                Log.d("Natalia", "onResp");
                 List<MainActivity.Contributor> contributors = response.body();
-                Log.d("Natalia", String.valueOf(response.body()));
                 data = new String[contributors.size()];
                 int i = 0;
                 for (MainActivity.Contributor contributor : contributors) {
-                    data[i] = (contributor + "( " + contributor.contributions + ")");
+                    data[i] = (contributor.login + "( " + contributor.contributions + ")");
                     i++;
                     //System.out.println(contributor.login + " (" + contributor.contributions + ")");
                 }
