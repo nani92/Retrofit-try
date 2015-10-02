@@ -10,6 +10,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -25,7 +28,7 @@ import retrofit.http.Path;
 public class MainActivity extends Activity {
 
     public static final String API_URL = "https://api.github.com";
-    private static String[] data;
+    private static Contributor[] data;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,15 +84,7 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public static class Contributor {
-        public final String login;
-        public final int contributions;
 
-        public Contributor(String login, int contributions) {
-            this.login = login;
-            this.contributions = contributions;
-        }
-    }
 
     public interface GitHub {
         @GET("/repos/{owner}/{repo}/contributors")
@@ -109,15 +104,15 @@ public class MainActivity extends Activity {
 
         MainActivity.GitHub github = retrofit.create(MainActivity.GitHub.class);
 
-        Call<List<MainActivity.Contributor>> call = github.contributors("square", "retrofit");
-        call.enqueue(new Callback<List<MainActivity.Contributor>>() {
+        Call<List<Contributor>> call = github.contributors("square", "retrofit");
+        call.enqueue(new Callback<List<Contributor>>() {
             @Override
             public void onResponse(Response<List<Contributor>> response, Retrofit retrofit) {
-                List<MainActivity.Contributor> contributors = response.body();
-                data = new String[contributors.size()];
+                List<Contributor> contributors = response.body();
+                data = new Contributor[contributors.size()];
                 int i = 0;
-                for (MainActivity.Contributor contributor : contributors) {
-                    data[i] = (contributor.login + "( " + contributor.contributions + ")");
+                for (Contributor contributor : contributors) {
+                    data[i] = contributor;
                     i++;
                     //System.out.println(contributor.login + " (" + contributor.contributions + ")");
                 }
@@ -132,7 +127,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    public void SendDataToView(String[] data) {
+    public void SendDataToView(Contributor[] data) {
         RecyclerView.Adapter mAdapter = new RecyclerViewAdapter(data);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
         recyclerView.setAdapter(mAdapter);
