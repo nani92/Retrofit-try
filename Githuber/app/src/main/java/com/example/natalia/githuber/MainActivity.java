@@ -1,10 +1,11 @@
 package com.example.natalia.githuber;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.os.Bundle;
-import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -12,7 +13,9 @@ import java.io.IOException;
 import java.util.List;
 
 import retrofit.Call;
+import retrofit.Callback;
 import retrofit.GsonConverterFactory;
+import retrofit.Response;
 import retrofit.Retrofit;
 import retrofit.http.GET;
 import retrofit.http.Path;
@@ -21,15 +24,29 @@ import retrofit.http.Path;
 public class MainActivity extends Activity {
 
     public static final String API_URL = "https://api.github.com";
+    private static String[] data;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        Log.d("Natalia", "przed");
         //final SwipeRefreshLayout layoutManager = (SwipeRefreshLayout) findViewById(R.id.swiperefresh);
         RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        RetrofitService retrofitService= new RetrofitService();
+        try {
+            Log.d("Natalia", "RetroSe");
+            main();
+            //String[] data = retrofitService.getData();
+            /*Log.d("Natalia", "jest tutaj");
+            RecyclerView.Adapter mAdapter = new RecyclerViewAdapter(data);
+            recyclerView.setAdapter(mAdapter);*/
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -69,25 +86,49 @@ public class MainActivity extends Activity {
         Call<List<Contributor>> contributors(
                 @Path("owner") String owner,
                 @Path("repo") String repo);
+        /*public void contributors(@Path("owner") String owner, @Path("repo") String repo,
+                                 Callback<List<Contributor>> contributors);*/
     }
 
-    public static void main(String... args) throws IOException {
+    public void main() throws IOException {
         // Create a very simple REST adapter which points the GitHub API.
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(API_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
-        // Create an instance of our GitHub API interface.
-        GitHub github = retrofit.create(GitHub.class);
+        MainActivity.GitHub github = retrofit.create(MainActivity.GitHub.class);
 
-        // Create a call instance for looking up Retrofit contributors.
-        Call<List<Contributor>> call = github.contributors("square", "retrofit");
+        Call<List<MainActivity.Contributor>> call = github.contributors("square", "retrofit");
+        Log.d("Natalia", "przed enq");
+        call.enqueue(new Callback<List<MainActivity.Contributor>>() {
+            @Override
+            public void onResponse(Response<List<Contributor>> response, Retrofit retrofit) {
+                Log.d("Natalia", "onResp");
+                List<MainActivity.Contributor> contributors = response.body();
+                Log.d("Natalia", String.valueOf(response.body()));
+                data = new String[contributors.size()];
+                int i = 0;
+                for (MainActivity.Contributor contributor : contributors) {
+                    data[i] = (contributor + "( " + contributor.contributions + ")");
+                    i++;
+                    //System.out.println(contributor.login + " (" + contributor.contributions + ")");
+                }
+                SendDataToView(data);
+            }
 
-        // Fetch and print a list of the contributors to the library.
-        List<Contributor> contributors = call.execute().body();
-        for (Contributor contributor : contributors) {
-            System.out.println(contributor.login + " (" + contributor.contributions + ")");
-        }
+            @Override
+            public void onFailure(Throwable t) {
+                // ...
+                Log.d("Natalia", "Failure");
+            }
+        });
     }
+
+    public void SendDataToView(String[] data) {
+        RecyclerView.Adapter mAdapter = new RecyclerViewAdapter(data);
+        RecyclerView recyclerView = (RecyclerView) findViewById(R.id.my_recycler_view);
+        recyclerView.setAdapter(mAdapter);
+    }
+
 }
